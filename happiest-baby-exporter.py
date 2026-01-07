@@ -244,15 +244,16 @@ def clean_journal_entry(
         if key.startswith("data_"):
             key = key[5:]  # Remove 'data_' prefix
 
-        # Handle units - keep only imperial or metric
+        # Handle units - keep only imperial or metric (or both if units == "both")
         if units == "imperial":
             # Skip metric fields
             if key.endswith("Metric") or key.endswith("_ml") or "metric" in key.lower():
                 continue
-        else:  # metric
+        elif units == "metric":
             # Skip imperial fields
             if key.endswith("Imperial") or key.endswith("_oz") or "imperial" in key.lower():
                 continue
+        # If units == "both", keep all fields
 
         # Special handling for diaper types field
         if journal_type == "diaper" and key == "types" and isinstance(value, list):
@@ -305,6 +306,7 @@ def export_to_csv(
     units: str,
     baby_id: Optional[str] = None,
     baby_name: Optional[str] = None,
+    encoding: str = "utf-8",
 ) -> None:
     """Export journal data to CSV file."""
     if not journals:
@@ -326,7 +328,7 @@ def export_to_csv(
     # Order fieldnames
     fieldnames = order_fields(list(all_keys))
 
-    with open(output_file, "w", newline="") as f:
+    with open(output_file, "w", newline="", encoding=encoding) as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(cleaned)
@@ -450,19 +452,25 @@ def extract_baby_id_from_logs(log_file: str) -> str:
 )
 @click.option(
     "--journal-type",
-    help="Comma-separated list of journal types to export (breastfeeding,bottlefeeding,diaper,solidfood,pumping,sleep; if not specified, exports all types)",
+    help="Comma-separated list of journal types to export (breastfeeding,bottlefeeding,diaper,solidfood,pumping,sleep,weight,height,head; if not specified, exports all types)",
 )
 @click.option(
     "--units",
-    type=click.Choice(["imperial", "metric"], case_sensitive=False),
+    type=click.Choice(["imperial", "metric", "both"], case_sensitive=False),
     default="imperial",
-    help="Unit system to use for measurements",
+    help="Unit system to use for measurements (both keeps all columns)",
     show_default=True,
 )
 @click.option(
     "--timezone",
     default="America/Los_Angeles",
     help="Timezone for sleep session data",
+    show_default=True,
+)
+@click.option(
+    "--encoding",
+    default="utf-8",
+    help="Character encoding for CSV files (utf-8 recommended for emoji support)",
     show_default=True,
 )
 def main(
@@ -474,6 +482,7 @@ def main(
     journal_type: Optional[str],
     units: str,
     timezone: str,
+    encoding: str,
 ) -> None:
     """Export journal data from Happiest Baby API to CSV files.
 
@@ -489,7 +498,7 @@ def main(
     # Determine journal types to export
     if journal_type:
         # Parse comma-separated list
-        valid_types = ["breastfeeding", "bottlefeeding", "diaper", "solidfood", "pumping", "sleep"]
+        valid_types = ["breastfeeding", "bottlefeeding", "diaper", "solidfood", "pumping", "sleep", "weight", "height", "head"]
         journal_types = [t.strip().lower() for t in journal_type.split(",")]
 
         # Validate types
@@ -499,7 +508,7 @@ def main(
             click.echo(f"Valid types: {', '.join(valid_types)}", err=True)
             sys.exit(1)
     else:
-        journal_types = ["breastfeeding", "bottlefeeding", "diaper", "solidfood", "pumping", "sleep"]
+        journal_types = ["breastfeeding", "bottlefeeding", "diaper", "solidfood", "pumping", "sleep", "weight", "height", "head"]
 
     # Get baby_id only if needed (not needed for pumping journals only)
     needs_baby_id = any(jtype != "pumping" for jtype in journal_types)
@@ -572,15 +581,15 @@ def main(
             if jtype == "sleep":
                 # Export detailed sleep data
                 detailed_output = output_dir / "journals_sleep_detailed.csv"
-                export_to_csv(journals, str(detailed_output), jtype, units, baby_id, selected_baby_name)
+                export_to_csv(journals, str(detailed_output), jtype, units, baby_id, selected_baby_name, encoding)
 
                 # Export consolidated sleep data
                 consolidated_output = output_dir / "journals_sleep.csv"
                 consolidated = consolidate_sleep_sessions(journals)
-                export_to_csv(consolidated, str(consolidated_output), jtype, units, baby_id, selected_baby_name)
+                export_to_csv(consolidated, str(consolidated_output), jtype, units, baby_id, selected_baby_name, encoding)
             else:
                 output_file = output_dir / f"journals_{jtype}.csv"
-                export_to_csv(journals, str(output_file), jtype, units, baby_id, selected_baby_name)
+                export_to_csv(journals, str(output_file), jtype, units, baby_id, selected_baby_name, encoding)
 
             click.echo()
         except requests.exceptions.HTTPError as e:

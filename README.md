@@ -6,10 +6,10 @@ This tool allows you to download and back up your baby's data from Happiest Baby
 
 ## Features
 
-- **Multiple journal types**: Exports breastfeeding, bottlefeeding, diaper, solid food, pumping, and sleep data
+- **Multiple journal types**: Exports breastfeeding, bottlefeeding, diaper, solid food, pumping, sleep, weight, height, and head circumference data
 - **Flexible date ranges**: Specify how many days of data to export (default: 14 days)
 - **Sleep tracking**: Provides both detailed and consolidated sleep session data
-- **Unit selection**: Choose between imperial or metric measurements
+- **Unit selection**: Choose between imperial, metric, or both measurements
 - **Easy authentication**: Uses your Happiest Baby email/password credentials
 - **Multiple babies**: Automatically handles accounts with multiple babies
 
@@ -98,10 +98,15 @@ Options:
   --output-dir DIRECTORY     Directory to save CSV files [default: .]
   --journal-type TEXT        Comma-separated list of journal types to export
                              (breastfeeding,bottlefeeding,diaper,solidfood,
-                             pumping,sleep; if not specified, exports all types)
-  --units [imperial|metric]  Unit system to use for measurements [default: imperial]
+                             pumping,sleep,weight,height,head; if not specified,
+                             exports all types)
+  --units [imperial|metric|both]
+                             Unit system to use for measurements (both keeps
+                             all columns) [default: imperial]
   --timezone TEXT            Timezone for sleep session data
                              [default: America/Los_Angeles]
+  --encoding TEXT            Character encoding for CSV files (utf-8
+                             recommended for emoji support) [default: utf-8]
   --help                     Show this message and exit.
 ```
 
@@ -120,6 +125,16 @@ Options:
 **Export with metric units:**
 ```bash
 ./happiest-baby-exporter.py --units metric
+```
+
+**Export with both imperial and metric units:**
+```bash
+./happiest-baby-exporter.py --units both
+```
+
+**Export growth tracking data (weight, height, head circumference):**
+```bash
+./happiest-baby-exporter.py --journal-type weight,height,head
 ```
 
 **Export to a specific directory:**
@@ -143,6 +158,9 @@ The script creates separate CSV files for each journal type:
 - `journals_pumping.csv` - Pumping sessions
 - `journals_sleep.csv` - Consolidated sleep sessions (grouped by session ID)
 - `journals_sleep_detailed.csv` - Detailed sleep data (all state changes)
+- `journals_weight.csv` - Weight measurements
+- `journals_height.csv` - Height/length measurements
+- `journals_head.csv` - Head circumference measurements
 
 ## CSV Structure
 
